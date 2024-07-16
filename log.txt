@@ -1,0 +1,138 @@
+Bus 002 Device 042 ID 06cb:000f   12 Mbps
+Device Descriptor:
+  bLength               18
+  bDescriptorType        1
+  bcdUSB              2.00
+  bDeviceClass        0xff
+  bDeviceSubClass     0x00
+  bDeviceProtocol     0xff
+  bMaxPacketSize0       64
+  idVendor          0x06cb Synaptics, Inc.
+  idProduct         0x000f Unknown product
+  bcdDevice           1.00
+  iManufacturer          1 Synaptics
+  iProduct               2 MPC04 Controller
+  iSerialNumber          3 7654321
+  bNumConfigurations     1
+  Config Descriptor:
+    bLength                9
+    bDescriptorType        2
+    wTotalLength      0x0027
+    bNumInterfaces         1
+    bConfigurationValue    1
+    iConfiguration         0 
+    bmAttributes:
+      Self Powered     false
+      Remote Wakeup    false
+    bMaxPower            500mW
+    no extra data
+    Interface Descriptor:
+      bLength                9
+      bDescriptorType        4
+      bInterfaceNumber       0
+      bAlternateSetting      0
+      bNumEndpoints          3
+      bInterfaceClass     0xff
+      bInterfaceSubClass  0x00
+      bInterfaceProtocol  0xff
+      iInterface             0 
+    []
+      Endpoint Descriptor:
+        bLength                7
+        bDescriptorType        5
+        bEndpointAddress    0x01 EP 1 Out
+        bmAttributes:
+          Transfer Type          Bulk
+          Synch Type             NoSync
+          Usage Type             Data
+        wMaxPacketSize    0x0040
+        bInterval              0
+      Endpoint Descriptor:
+        bLength                7
+        bDescriptorType        5
+        bEndpointAddress    0x82 EP 2 In
+        bmAttributes:
+          Transfer Type          Bulk
+          Synch Type             NoSync
+          Usage Type             Data
+        wMaxPacketSize    0x0040
+        bInterval              0
+      Endpoint Descriptor:
+        bLength                7
+        bDescriptorType        5
+        bEndpointAddress    0x83 EP 3 In
+        bmAttributes:
+          Transfer Type          Interrupt
+          Synch Type             NoSync
+          Usage Type             Data
+        wMaxPacketSize    0x0040
+        bInterval              1
+Bus 002 Device 002 ID 06cb:00bd   12 Mbps
+Device Descriptor:
+  bLength               18
+  bDescriptorType        1
+  bcdUSB              2.00
+  bDeviceClass        0xff
+  bDeviceSubClass     0x10
+  bDeviceProtocol     0xff
+  bMaxPacketSize0        8
+  idVendor          0x06cb Synaptics, Inc.
+  idProduct         0x00bd Prometheus MIS Touch Fingerprint Reader
+  bcdDevice           0.00
+  iManufacturer          0 
+  iProduct               0 
+  iSerialNumber          1 
+  bNumConfigurations     1
+  Config Descriptor:
+    bLength                9
+    bDescriptorType        2
+    wTotalLength      0x0027
+    bNumInterfaces         1
+    bConfigurationValue    1
+    iConfiguration         0 
+    bmAttributes:
+      Self Powered     false
+      Remote Wakeup     true
+    bMaxPower            100mW
+    no extra data
+    Interface Descriptor:
+      bLength                9
+      bDescriptorType        4
+      bInterfaceNumber       0
+      bAlternateSetting      0
+      bNumEndpoints          3
+      bInterfaceClass     0xff
+      bInterfaceSubClass  0x00
+      bInterfaceProtocol  0x00
+      iInterface             0 
+    []
+      Endpoint Descriptor:
+        bLength                7
+        bDescriptorType        5
+        bEndpointAddress    0x01 EP 1 Out
+        bmAttributes:
+          Transfer Type          Bulk
+          Synch Type             NoSync
+          Usage Type             Data
+        wMaxPacketSize    0x0040
+        bInterval              0
+      Endpoint Descriptor:
+        bLength                7
+        bDescriptorType        5
+        bEndpointAddress    0x81 EP 1 In
+        bmAttributes:
+          Transfer Type          Bulk
+          Synch Type             NoSync
+          Usage Type             Data
+        wMaxPacketSize    0x0040
+        bInterval              0
+      Endpoint Descriptor:
+        bLength                7
+        bDescriptorType        5
+        bEndpointAddress    0x83 EP 3 In
+        bmAttributes:
+          Transfer Type          Interrupt
+          Synch Type             NoSync
+          Usage Type             Data
+        wMaxPacketSize    0x0008
+        bInterval              4
