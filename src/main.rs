@@ -479,12 +479,10 @@ fn write_endpoint<T: UsbContext>(
     match transfer_type {
         TransferType::Interrupt => println!("No write to interrupt endpoint"),
         TransferType::Bulk => match handle.write_bulk(endpoint.address, &buf, timeout) {
-            Ok(len) => {
-                ()
-            }
-            Err(err) => println!("could not write to endpoint: {}", err),
-        },
-        _ => (),
+            Ok(len) => {}
+            Err(err) => println!("could not write to endpoint: {}", err)
+        }
+        _ => {}
     }
 }
 
@@ -502,9 +500,9 @@ fn read_endpoint<T: UsbContext>(
                 Ok(len) => {
                     println!(" - read: {:?}", &buf[..len]);
                 }
-                Err(err) => println!("could not read from endpoint: {}", err),
+                Err(err) => println!("could not read from endpoint: {}", err)
             }
-        },
+        }
 
         TransferType::Bulk => {
             loop {
@@ -512,16 +510,18 @@ fn read_endpoint<T: UsbContext>(
                     Ok(len) => {
                         buf.extend_from_slice(&temp_buf[..len]);
                         continue;
-                    },
+                    }
                     Err(err) => {
-                        if err != rusb::Error::Timeout {
-                            println!("Read bulk in endpoint err = {:?}", err);
+                        match err {
+                            rusb::Error::Timeout => {}
+                            _ => println!("Read bulk in endpoint err = {:?}", err)
                         }
                         break;
-                    },
+                    }
                 }
             }
         }
-        _ => (),
+
+        _ => {}
     }
 }
