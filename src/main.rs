@@ -18,7 +18,7 @@ use rusb::{
 
 use std::{
     str,
-    iter::Product, 
+    fs,
     time::Duration
 };
 
@@ -44,19 +44,19 @@ struct Endpoint {
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// command to send
+    /// file to send
     #[arg(short, long)]
-    command: String,
+    file: String,
 }
 
 fn main() {
-    //let args = Args::parse();
-    //let cmds: Vec<&str> = args.command.split_whitespace().collect();
     let vid = 0x06cb;
     let pid = 0x000f;
-    //rusb::set_log_level(rusb::LogLevel::Debug);
+    rusb::set_log_level(rusb::LogLevel::Info);
     let mut context = Context::new().unwrap();
-    let (mut device, device_desc, mut device_handle) = open_device(&mut context, vid, pid).unwrap();
+    let (mut device,
+        device_desc,
+        mut device_handle) = open_device(&mut context, vid, pid).unwrap();
     let out_ep = find_writable_endpoint(&mut device,
                                         &device_desc,
                                         TransferType::Bulk).unwrap();
@@ -65,43 +65,22 @@ fn main() {
                                        TransferType::Bulk).unwrap();
     configure_endpoint(&mut device_handle, &out_ep).unwrap();
     configure_endpoint(&mut device_handle, &in_ep).unwrap();
-    let commands = ["identify\n", "target=0 power on vdd=1800 vpu=3300 vled=1200 vddtx=1800\n",
-        "target=0 config raw pl=i2c pull-ups=yes attnPull-ups=yes speed=400 attn=none base64=no\n",
-        "target=0 raw bus-addr=40 wr=0200005a\n",
-        "target=0 raw bus-addr=40 rd=4\n",
-        "target=0 raw bus-addr=40 rd=38\n",
-        "target=0 raw bus-addr=40 wr=0a000017\n",
-        "target=0 raw bus-addr=40 rd=4\n",
-        "target=0 raw bus-addr=40 rd=42\n",];
-    /*
-    for cmd in cmds {
-        if cmd.len() > 0 {
-            println!("{}", cmd);
-        }
 
-        write_endpoint(&mut device_handle, &out_ep, TransferType::Bulk, format!("{}\n", cmd).as_str());
-        let mut buf = Vec::new();
-        read_endpoint(&mut device_handle, &in_ep, TransferType::Bulk, &mut buf);
-        if buf.len() > 0 {
-            println!("{}", str::from_utf8(&buf).unwrap());
+    let args = Args::parse();
+    let contents = fs::read_to_string(args.file).expect("Failed to open file.");
+    //let contents = fs::read_to_string("cdci.txt").expect("Failed to open file.");
+    for line in contents.lines() {
+        if line.len() > 0 {
+            println!("{}", line);
+            write_endpoint(&mut device_handle, &out_ep,
+                           TransferType::Bulk, format!("{}\n", line).as_str());
+            let mut buf = Vec::new();
+            read_endpoint(&mut device_handle, &in_ep, TransferType::Bulk, &mut buf);
+            if buf.len() > 0 {
+                println!("{}", str::from_utf8(&buf).unwrap());
+            }
         }
     }
-    */
-
-    for c in commands {
-        if c.len() > 0 {
-            println!("{}", c);
-        }
-
-        write_endpoint(&mut device_handle, &out_ep, TransferType::Bulk, c);
-        let mut buf = Vec::new();
-        read_endpoint(&mut device_handle, &in_ep, TransferType::Bulk, &mut buf);
-        if buf.len() > 0 {
-            println!("{}", str::from_utf8(&buf).unwrap());
-        }
-    }
-
-
 }
 
 fn open_device<T: UsbContext>(context: &mut T,
@@ -461,9 +440,18 @@ fn configure_endpoint<T: UsbContext>(
     handle: &mut DeviceHandle<T>,
     endpoint: &Endpoint,
 ) -> Result<()> {
-    handle.set_active_configuration(endpoint.config)?;
-    handle.claim_interface(endpoint.iface)?;
-    handle.set_alternate_setting(endpoint.iface, endpoint.setting)?;
+    match handle.set_active_configuration(endpoint.config) {
+        Ok(()) => {},
+        Err(e) => println!("set_active_configuration error: {:?}", e)
+    }
+    match handle.claim_interface(endpoint.iface) {
+        Ok(()) => {},
+        Err(e) => println!("claim_interface error: {:?}", e)
+    }
+    match handle.set_alternate_setting(endpoint.iface, endpoint.setting) {
+        Ok(()) => {},
+        Err(e) => println!("set_alternate_setting error: {:?}", e)
+    }
     Ok(())
 }
 
@@ -479,7 +467,11 @@ fn write_endpoint<T: UsbContext>(
     match transfer_type {
         TransferType::Interrupt => println!("No write to interrupt endpoint"),
         TransferType::Bulk => match handle.write_bulk(endpoint.address, &buf, timeout) {
-            Ok(len) => {}
+            Ok(len) => {
+                //if command.len() == len {
+                //    println!("write command ok.");
+                //}
+            }
             Err(err) => println!("could not write to endpoint: {}", err)
         }
         _ => {}
@@ -492,23 +484,15 @@ fn read_endpoint<T: UsbContext>(
     transfer_type: TransferType,
     buf: &mut Vec<u8>,
 ) {
-    let timeout = Duration::from_millis(20);
-    let mut temp_buf = [0; 64];
+    let timeout = Duration::from_millis(50);
+    let mut temp_buf = [0; 256];
     match transfer_type {
-        TransferType::Interrupt => {
-            match handle.read_interrupt(endpoint.address, &mut temp_buf, timeout) {
-                Ok(len) => {
-                    println!(" - read: {:?}", &buf[..len]);
-                }
-                Err(err) => println!("could not read from endpoint: {}", err)
-            }
-        }
-
+        TransferType::Interrupt => println!("No read from interrupt endpoint"),
         TransferType::Bulk => {
             loop {
                 match handle.read_bulk(endpoint.address, &mut temp_buf, timeout) {
                     Ok(len) => {
-                        buf.extend_from_slice(&temp_buf[..len]);
+                        buf.extend(temp_buf[..len].iter());
                         continue;
                     }
                     Err(err) => {
