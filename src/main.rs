@@ -19,9 +19,10 @@ use rusb::{
 use std::{
     str,
     fs,
-    time::Duration
+    time::Duration,
+    result
 };
-
+use std::fmt::format;
 use usb_ids::{self, FromId};
 
 use clap::Parser;
@@ -69,19 +70,31 @@ fn main() {
     let args = Args::parse();
     let contents = fs::read_to_string(args.file).expect("Failed to open file.");
     //let contents = fs::read_to_string("cdci.txt").expect("Failed to open file.");
+
     for line in contents.lines() {
         if line.len() > 0 {
             println!("{}", line);
-            write_endpoint(&mut device_handle, &out_ep,
-                           TransferType::Bulk, format!("{}\n", line).as_str());
+            write_endpoint(
+                &mut device_handle,
+                &out_ep,
+                TransferType::Bulk,
+                format!("{}\n", line).as_str()
+            ).unwrap();
             let mut buf = Vec::new();
-            read_endpoint(&mut device_handle, &in_ep, TransferType::Bulk, &mut buf);
+            read_endpoint(
+                &mut device_handle,
+                &in_ep,
+                TransferType::Bulk,
+                &mut buf
+            ).unwrap();
             if buf.len() > 0 {
                 println!("{}", str::from_utf8(&buf).unwrap());
             }
         }
     }
 }
+
+
 
 fn open_device<T: UsbContext>(context: &mut T,
                               vid: u16,
@@ -375,7 +388,7 @@ fn get_speed(speed: Speed) -> &'static str {
 fn find_writable_endpoint<T: UsbContext>(
     device: &mut Device<T>,
     device_desc: &DeviceDescriptor,
-    transfer_type: TransferType,) -> Option<Endpoint> {
+    transfer_type: TransferType) -> Option<Endpoint> {
         for n in 0..device_desc.num_configurations() {
             let config_desc = match device.config_descriptor(n) {
                 Ok(c) => c,
@@ -405,7 +418,7 @@ fn find_writable_endpoint<T: UsbContext>(
 fn find_readable_endpoint<T: UsbContext>(
     device: &mut Device<T>,
     device_desc: &DeviceDescriptor,
-    transfer_type: TransferType,
+    transfer_type: TransferType
 ) -> Option<Endpoint> {
     for n in 0..device_desc.num_configurations() {
         let config_desc = match device.config_descriptor(n) {
@@ -459,22 +472,17 @@ fn write_endpoint<T: UsbContext>(
     handle: &mut DeviceHandle<T>,
     endpoint: &Endpoint,
     transfer_type: TransferType,
-    command: &str) {
+    command: &str) -> result::Result<usize, String> {
 
     let buf = command.as_bytes();
     let timeout = Duration::from_secs(2);
 
     match transfer_type {
-        TransferType::Interrupt => println!("No write to interrupt endpoint"),
         TransferType::Bulk => match handle.write_bulk(endpoint.address, &buf, timeout) {
-            Ok(len) => {
-                //if command.len() == len {
-                //    println!("write command ok.");
-                //}
-            }
-            Err(err) => println!("could not write to endpoint: {}", err)
+            Ok(len) => Ok(len),
+            Err(err) => Err(format!("write to bulk endpoint err {:?}", err))
         }
-        _ => {}
+        _ => Err("No write to endpoints other than bulk".to_string())
     }
 }
 
@@ -482,12 +490,10 @@ fn read_endpoint<T: UsbContext>(
     handle: &mut DeviceHandle<T>,
     endpoint: &Endpoint,
     transfer_type: TransferType,
-    buf: &mut Vec<u8>,
-) {
+    buf: &mut Vec<u8>) -> result::Result<usize, String> {
     let timeout = Duration::from_millis(50);
     let mut temp_buf = [0; 256];
     match transfer_type {
-        TransferType::Interrupt => println!("No read from interrupt endpoint"),
         TransferType::Bulk => {
             loop {
                 match handle.read_bulk(endpoint.address, &mut temp_buf, timeout) {
@@ -496,16 +502,15 @@ fn read_endpoint<T: UsbContext>(
                         continue;
                     }
                     Err(err) => {
-                        match err {
-                            rusb::Error::Timeout => {}
-                            _ => println!("Read bulk in endpoint err = {:?}", err)
+                        return if err == rusb::Error::Timeout {
+                            Ok(buf.len())
+                        } else {
+                            Err(format!("read from bulk endpoint err {:?}", err))
                         }
-                        break;
                     }
                 }
             }
         }
-
-        _ => {}
+        _ => Err("No read from interrupt endpoint".to_string())
     }
 }
