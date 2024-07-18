@@ -1,0 +1,9 @@
+identify
+target=0 power on vdd=1800 vpu=3300 vled=1200 vddtx=1800
+target=0 config raw pl=i2c pull-ups=yes attnPull-ups=yes speed=400 attn=none base64=no
+target=0 raw bus-addr=40 wr=0200005a
+target=0 raw bus-addr=40 rd=4
+target=0 raw bus-addr=40 rd=38
+target=0 raw bus-addr=40 wr=0a000017
+target=0 raw bus-addr=40 rd=4
+target=0 raw bus-addr=40 rd=42
