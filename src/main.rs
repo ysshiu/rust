@@ -57,7 +57,15 @@ fn main() {
     let mut context = Context::new().unwrap();
     let (mut device,
         device_desc,
-        mut device_handle) = open_device(&mut context, vid, pid).unwrap();
+        mut device_handle) = match open_device(&mut context, vid, pid) {
+        Some((_0, _1, _2)) => {
+            (_0, _1, _2)
+        }
+        None => {
+            println!("Fail to open MPC.");
+            return ();
+        }
+    };
     let out_ep = find_writable_endpoint(&mut device,
                                         &device_desc,
                                         TransferType::Bulk).unwrap();
@@ -68,7 +76,7 @@ fn main() {
     configure_endpoint(&mut device_handle, &in_ep).unwrap();
 
     let args = Args::parse();
-    let contents = fs::read_to_string(args.file).expect("Failed to open file.");
+    let contents = fs::read_to_string(args.file).expect("Fail to open file.");
     //let contents = fs::read_to_string("cdci.txt").expect("Failed to open file.");
 
     for line in contents.lines() {
@@ -511,6 +519,6 @@ fn read_endpoint<T: UsbContext>(
                 }
             }
         }
-        _ => Err("No read from interrupt endpoint".to_string())
+        _ => Err("No read from endpoints other than bulk".to_string())
     }
 }
