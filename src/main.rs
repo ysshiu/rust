@@ -16,7 +16,7 @@ use rusb::{
     UsbContext
 };
 
-use std::{str, fs, time::Duration, result, io};
+use std::{str, fs, time::Duration, result, io, time};
 use std::fmt::format;
 use std::io::ErrorKind;
 use std::path::Path;
@@ -93,21 +93,14 @@ fn main() {
         for line in contents.lines() {
             if line.len() > 0 {
                 println!("{}", line);
-                write_endpoint(
-                    &mut device_handle,
-                    &out_ep,
-                    TransferType::Bulk,
-                    format!("{}\n", line).as_str()
-                ).unwrap();
-                let mut buf = Vec::new();
-                read_endpoint(
-                    &mut device_handle,
-                    &in_ep,
-                    TransferType::Bulk,
-                    &mut buf
-                ).unwrap();
-                if buf.len() > 0 {
-                    println!("{}", str::from_utf8(&buf).unwrap());
+                match write_command_read_response(&mut device_handle,
+                &out_ep,
+                &in_ep,
+                TransferType::Bulk, format!("{}\n", line).as_str(),
+                Duration::from_secs(2),
+                Duration::from_millis(50)) {
+                    Ok(response) => println!("{}", str::from_utf8(&response).unwrap()),
+                    Err(e) => println!("{}",e)
                 }
             }
         }
@@ -151,6 +144,31 @@ fn open_device<T: UsbContext>(context: &mut T,
         }
     }
     None
+}
+
+fn write_command_read_response<T: UsbContext>(device_handle: &mut DeviceHandle<T>,
+out_endpoint: &Endpoint,
+in_endpoint: &Endpoint,
+transfer_type: TransferType,
+command: &str,
+write_timeout: Duration,
+read_timeout: Duration) -> result::Result<Vec<u8>, String> {
+    match write_endpoint(device_handle,
+    out_endpoint,
+    transfer_type,
+    command,
+    write_timeout) {
+        Ok(n) => {
+            match read_endpoint(device_handle,
+            in_endpoint,
+            transfer_type,
+            read_timeout) {
+                Ok(response) => Ok(response),
+                Err(e) => Err(e)
+            }
+        }
+        Err(e) => Err(e)
+    }
 }
 
 /**
@@ -505,11 +523,10 @@ fn write_endpoint<T: UsbContext>(
     handle: &mut DeviceHandle<T>,
     endpoint: &Endpoint,
     transfer_type: TransferType,
-    command: &str) -> result::Result<usize, String> {
+    command: &str,
+    timeout: Duration) -> result::Result<usize, String> {
 
     let buf = command.as_bytes();
-    let timeout = Duration::from_secs(2);
-
     match transfer_type {
         TransferType::Bulk => match handle.write_bulk(endpoint.address, &buf, timeout) {
             Ok(len) => Ok(len),
@@ -523,22 +540,22 @@ fn read_endpoint<T: UsbContext>(
     handle: &mut DeviceHandle<T>,
     endpoint: &Endpoint,
     transfer_type: TransferType,
-    buf: &mut Vec<u8>) -> result::Result<usize, String> {
-    let timeout = Duration::from_millis(50);
+    timeout: Duration) -> result::Result<Vec<u8>, String> {
+
+    let mut response = Vec::new();
     let mut temp_buf = [0; 256];
     match transfer_type {
         TransferType::Bulk => {
             loop {
                 match handle.read_bulk(endpoint.address, &mut temp_buf, timeout) {
                     Ok(len) => {
-                        buf.extend(temp_buf[..len].iter());
+                        response.extend(temp_buf[..len].iter());
                         continue;
                     }
                     Err(err) => {
-                        return if err == rusb::Error::Timeout {
-                            Ok(buf.len())
-                        } else {
-                            Err(format!("read from bulk endpoint err {:?}", err))
+                        return match response.len() > 0 && err == rusb::Error::Timeout {
+                            true => Ok(response),
+                            false => Err(format!("read from bulk endpoint err {:?}", err))
                         }
                     }
                 }
