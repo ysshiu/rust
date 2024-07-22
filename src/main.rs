@@ -1,26 +1,18 @@
 use rusb::{
     Context,
-    ConfigDescriptor,
     Device, 
     DeviceDescriptor, 
-    DeviceHandle, 
-    DeviceList, 
-    Direction, 
-    EndpointDescriptor, 
-    GlobalContext, 
-    InterfaceDescriptor, 
+    DeviceHandle,
+    Direction,
     Language, 
-    Result, 
-    Speed, 
+    Result,
     TransferType, 
     UsbContext
 };
 
-use std::{str, fs, time::Duration, result, io, time};
-use std::fmt::format;
+use std::{str, fs, time::Duration, result, io};
 use std::io::ErrorKind;
-use std::path::Path;
-use usb_ids::{self, FromId};
+use usb_ids::{self};
 
 use clap::Parser;
 
@@ -89,7 +81,7 @@ fn main() {
     let rounds = args.repeat.unwrap_or_else(|| 1);
 
     //let contents = fs::read_to_string("cdci.txt").expect("Failed to open file.");
-    for n in 0..rounds {
+    for _ in 0..rounds {
         for line in contents.lines() {
             if line.len() > 0 {
                 println!("{}", line);
@@ -153,19 +145,9 @@ transfer_type: TransferType,
 command: &str,
 write_timeout: Duration,
 read_timeout: Duration) -> result::Result<Vec<u8>, String> {
-    match write_endpoint(device_handle,
-    out_endpoint,
-    transfer_type,
-    command,
-    write_timeout) {
-        Ok(n) => {
-            match read_endpoint(device_handle,
-            in_endpoint,
-            transfer_type,
-            read_timeout) {
-                Ok(response) => Ok(response),
-                Err(e) => Err(e)
-            }
+    match write_endpoint(device_handle, out_endpoint, transfer_type, command, write_timeout) {
+        Ok(_) => {
+            return read_endpoint(device_handle, in_endpoint, transfer_type, read_timeout);
         }
         Err(e) => Err(e)
     }
