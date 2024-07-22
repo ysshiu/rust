@@ -16,13 +16,10 @@ use rusb::{
     UsbContext
 };
 
-use std::{
-    str,
-    fs,
-    time::Duration,
-    result
-};
+use std::{str, fs, time::Duration, result, io};
 use std::fmt::format;
+use std::io::ErrorKind;
+use std::path::Path;
 use usb_ids::{self, FromId};
 
 use clap::Parser;
@@ -45,9 +42,13 @@ struct Endpoint {
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// file to send
+    /// file to read
     #[arg(short, long)]
     file: String,
+
+    /// number of executions
+    #[arg(short, long)]
+    repeat: Option<u32>
 }
 
 fn main() {
@@ -76,33 +77,57 @@ fn main() {
     configure_endpoint(&mut device_handle, &in_ep).unwrap();
 
     let args = Args::parse();
-    let contents = fs::read_to_string(args.file).expect("Fail to open file.");
-    //let contents = fs::read_to_string("cdci.txt").expect("Failed to open file.");
 
-    for line in contents.lines() {
-        if line.len() > 0 {
-            println!("{}", line);
-            write_endpoint(
-                &mut device_handle,
-                &out_ep,
-                TransferType::Bulk,
-                format!("{}\n", line).as_str()
-            ).unwrap();
-            let mut buf = Vec::new();
-            read_endpoint(
-                &mut device_handle,
-                &in_ep,
-                TransferType::Bulk,
-                &mut buf
-            ).unwrap();
-            if buf.len() > 0 {
-                println!("{}", str::from_utf8(&buf).unwrap());
+    //let contents = fs::read_to_string(args.file).expect("Fail to open file.");
+    let contents = match parse_cdci_file(&args.file) {
+        Ok(s) => s,
+        Err(e) => {
+            println!("Read file error: {}", e);
+            return ();
+        }
+    };
+    let rounds = args.repeat.unwrap_or_else(|| 1);
+
+    //let contents = fs::read_to_string("cdci.txt").expect("Failed to open file.");
+    for n in 0..rounds {
+        for line in contents.lines() {
+            if line.len() > 0 {
+                println!("{}", line);
+                write_endpoint(
+                    &mut device_handle,
+                    &out_ep,
+                    TransferType::Bulk,
+                    format!("{}\n", line).as_str()
+                ).unwrap();
+                let mut buf = Vec::new();
+                read_endpoint(
+                    &mut device_handle,
+                    &in_ep,
+                    TransferType::Bulk,
+                    &mut buf
+                ).unwrap();
+                if buf.len() > 0 {
+                    println!("{}", str::from_utf8(&buf).unwrap());
+                }
             }
         }
     }
 }
 
+fn parse_cdci_file(path: &String) -> result::Result<String, io::Error> {
+    match path.is_empty() {
+        false => {
+            match fs::read_to_string(path) {
+                Ok(s) => {
+                    Ok(s)
+                }
+                Err(e) => Err(e)
+            }
+        }
+        true => Err(io::Error::new(ErrorKind::NotFound, "file path is empty."))
+    }
 
+}
 
 fn open_device<T: UsbContext>(context: &mut T,
                               vid: u16,
