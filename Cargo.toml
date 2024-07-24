@@ -9,3 +9,5 @@ edition = "2021"
 rusb = "0.9.4"
 usb-ids = "1.2024.4"
 clap = { version = "4.5.9", features = ["derive"] }
+serde-xml-rs = "0.6.0"
+serde = { version = "1.0.204", features = ["derive"] }

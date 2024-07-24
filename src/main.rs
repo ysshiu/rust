@@ -9,12 +9,12 @@ use rusb::{
     TransferType, 
     UsbContext
 };
-
 use std::{str, fs, time::Duration, result, io};
 use std::io::ErrorKind;
 use usb_ids::{self};
-
 use clap::Parser;
+use serde::{Deserialize, Serialize};
+use serde_xml_rs::{from_str, to_string};
 
 #[derive(Debug)]
 struct UsbDevice<T: UsbContext> {
@@ -44,6 +44,7 @@ struct Args {
 }
 
 fn main() {
+    test();
     let vid = 0x06cb;
     let pid = 0x000f;
     rusb::set_log_level(rusb::LogLevel::Info);
@@ -91,12 +92,44 @@ fn main() {
                 TransferType::Bulk, format!("{}\n", line).as_str(),
                 Duration::from_secs(2),
                 Duration::from_millis(50)) {
-                    Ok(response) => println!("{}", str::from_utf8(&response).unwrap()),
+                    Ok(response) => {
+                        println!("{}", str::from_utf8(&response).unwrap());
+
+                    }
                     Err(e) => println!("{}",e)
                 }
             }
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+enum Raw {
+    wr(Wr),
+    rd(Rd)
+}
+
+
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+struct Wr {
+    count: String
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+struct Rd {
+    data: String
+}
+
+fn test() {
+    let s = r#"<raw><wr count="4"/></raw>"#;
+    let t = Raw::wr(
+        Wr {
+            count: "4".to_string()
+        }
+    );
+    let ss = to_string(&t).unwrap();
+    let n: Raw = from_str(s).unwrap();
 }
 
 fn parse_cdci_file(path: &String) -> result::Result<String, io::Error> {
