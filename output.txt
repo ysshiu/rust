@@ -1,0 +1,26 @@
+identify
+<identify id="0012" version="build-01.99" crocodile="01.17" cdci="01.17" info="MPC04 RevC IAR Mar 31 2022 18:53:44" boardRevision="3" serialNumber="7654321" />
+
+target=0 power on vdd=1800 vpu=3300 vled=1200 vddtx=1800
+<ok/>
+
+target=0 config raw pl=i2c pull-ups=yes attnPull-ups=yes speed=400 attn=none base64=no
+<ok/>
+
+target=0 raw bus-addr=40 wr=0200005a
+<raw><wr count="4"/></raw>
+
+target=0 raw bus-addr=40 rd=4
+<raw><rd data="01200052"/></raw>
+
+target=0 raw bus-addr=40 rd=38
+<raw><rd data="0120005202415342373930302D32302E300000000000D0104300020806080608000000004CEB"/></raw>
+
+target=0 raw bus-addr=40 wr=0a000017
+<raw><wr count="4"/></raw>
+
+target=0 raw bus-addr=40 rd=4
+<raw><rd data="0400003C"/></raw>
+
+target=0 raw bus-addr=40 rd=42
+<raw><rd data="0400003CFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"/></raw>

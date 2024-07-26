@@ -11,10 +11,19 @@ use rusb::{
 };
 
 use std::{str, fs, time::Duration, result, io};
+use std::borrow::Cow;
 use std::io::ErrorKind;
+use std::ops::Deref;
 use usb_ids::{self};
 
 use clap::Parser;
+use quick_xml::{
+    events::attributes::AttrError,
+    events::attributes::Attribute,
+    events::Event,
+    reader::Reader
+};
+
 
 #[derive(Debug)]
 struct UsbDevice<T: UsbContext> {
@@ -43,7 +52,56 @@ struct Args {
     repeat: Option<u32>
 }
 
+fn extract_attr() {
+    todo!()
+}
+
+fn test() {
+    let xml = r#"<raw><rd data="01200052"/></raw>"#;
+    //let xml = r#"<tag1 att1 = "test">
+    //            <tag2><!--Test comment-->Test</tag2>
+    //            <tag2>Test 2</tag2>
+    //         </tag1>"#;
+    let mut reader = Reader::from_str(xml);
+    reader.config_mut().trim_text(true);
+    let mut count = 0;
+    let mut txt = Vec::new();
+    let mut buf = Vec::new();
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Eof) => break,
+            Ok(Event::Start(e)) => {
+                match e.name().as_ref() {
+                    b"raw" => (),
+                    _ => ()
+                }
+            }
+            Ok(Event::Empty(e)) => {
+                match e.name().as_ref() {
+                    b"rd" => {
+                        fn closure(a: result::Result<Attribute, AttrError>) -> Cow<[u8]> {
+                            return a.unwrap().value
+                        }
+                        let attr = e.attributes().map(closure)
+                            .collect::<Vec<_>>()[0].clone();
+
+                        println!("attributes values: {:?}", attr);
+
+
+                    }
+                    _ => (),
+                }
+            }
+            Err(e) => panic!("Error at position {}: {:?}", reader.error_position(), e),
+            Ok(Event::Text(e)) => txt.push(e.unescape().unwrap().into_owned()),
+            _ => ()
+        }
+        buf.clear();
+    }
+}
+
 fn main() {
+    test();
     let vid = 0x06cb;
     let pid = 0x000f;
     rusb::set_log_level(rusb::LogLevel::Info);
