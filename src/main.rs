@@ -52,52 +52,51 @@ struct Args {
     repeat: Option<u32>
 }
 
-fn extract_attr() {
-    todo!()
+fn extract_attr(xml: &str) -> Option<String>{
+    let mut reader = Reader::from_str(xml);
+    reader.config_mut().trim_text(true);
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) => continue,
+            Ok(Event::Empty(e)) => {
+                return match e.name().as_ref() {
+                    b"ok" => {
+                        Some("ok".to_string())
+                    }
+                    _ => {
+                        let attrs = e.attributes().map(|a|
+                        {
+                            let attr = a.as_ref().unwrap();
+                            format!("{}={}",
+                                    str::from_utf8(attr.key.local_name().as_ref()).unwrap(),
+                                    str::from_utf8(attr.value.as_ref()).unwrap())
+                        });
+                        let mut s = Vec::new();
+                        for attr in attrs {
+                            s.extend_from_slice(attr.as_ref());
+                            s.extend_from_slice(" ".as_bytes());
+                        }
+                        Some(str::from_utf8(&s).unwrap().to_string())
+                    }
+                }
+            }
+            _ => return None
+        }
+    }
 }
 
 fn test() {
     let xml = r#"<raw><rd data="01200052"/></raw>"#;
-    //let xml = r#"<tag1 att1 = "test">
-    //            <tag2><!--Test comment-->Test</tag2>
-    //            <tag2>Test 2</tag2>
-    //         </tag1>"#;
-    let mut reader = Reader::from_str(xml);
-    reader.config_mut().trim_text(true);
-    let mut count = 0;
-    let mut txt = Vec::new();
-    let mut buf = Vec::new();
-    loop {
-        match reader.read_event_into(&mut buf) {
-            Ok(Event::Eof) => break,
-            Ok(Event::Start(e)) => {
-                match e.name().as_ref() {
-                    b"raw" => (),
-                    _ => ()
-                }
-            }
-            Ok(Event::Empty(e)) => {
-                match e.name().as_ref() {
-                    b"rd" => {
-                        fn closure(a: result::Result<Attribute, AttrError>) -> Cow<[u8]> {
-                            return a.unwrap().value
-                        }
-                        let attr = e.attributes().map(closure)
-                            .collect::<Vec<_>>()[0].clone();
-
-                        println!("attributes values: {:?}", attr);
-
-
-                    }
-                    _ => (),
-                }
-            }
-            Err(e) => panic!("Error at position {}: {:?}", reader.error_position(), e),
-            Ok(Event::Text(e)) => txt.push(e.unescape().unwrap().into_owned()),
-            _ => ()
-        }
-        buf.clear();
-    }
+    let xml_wr = r#"<raw><wr count="4"/></raw>"#;
+    let xml_ok = r#"<ok/>"#;
+    let xml_identify = r#"<identify id="0012"
+    version="build-01.99"
+    crocodile="01.17" cdci="01.17"
+    info="MPC04 RevC IAR Mar 31 2022 18:53:44" boardRevision="3" serialNumber="7654321" />"#;
+    println!("attr = {}", extract_attr(xml).unwrap());
+    println!("attr = {}", extract_attr(xml_wr).unwrap());
+    println!("attr = {}", extract_attr(xml_ok).unwrap());
+    println!("attr = {}", extract_attr(xml_identify).unwrap());
 }
 
 fn main() {
