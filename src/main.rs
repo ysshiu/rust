@@ -52,7 +52,33 @@ struct Args {
     repeat: Option<u32>
 }
 
-fn extract_attr(xml: &str) -> Option<String>{
+#[derive(Debug)]
+struct CdciXmlAttribute {
+    key: Vec<u8>,
+    value: Vec<u8>,
+}
+
+struct CdciXmlElement {
+    name: String,
+    attributes: Vec<CdciXmlAttribute>
+}
+
+impl CdciXmlElement {
+    pub fn new() -> Self {
+        todo!()
+    }
+}
+
+impl CdciXmlAttribute {
+    pub fn new(a: Attribute) -> Self {
+        CdciXmlAttribute {
+            key: Vec::from(a.key.as_ref()),
+            value: Vec::from(a.value)
+        }
+    }
+}
+
+fn extract_attr(xml: &str) -> Option<Vec<CdciXmlAttribute>>{
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(true);
     loop {
@@ -61,27 +87,27 @@ fn extract_attr(xml: &str) -> Option<String>{
             Ok(Event::Empty(e)) => {
                 return match e.name().as_ref() {
                     b"ok" => {
-                        Some("ok".to_string())
+                        Some(vec![CdciXmlAttribute {
+                            key: Vec::new(),
+                            value: Vec::new()
+                        }])
                     }
                     _ => {
-                        let attrs = e.attributes().map(|a|
-                        {
-                            let attr = a.as_ref().unwrap();
-                            format!("{}={}",
-                                    str::from_utf8(attr.key.local_name().as_ref()).unwrap(),
-                                    str::from_utf8(attr.value.as_ref()).unwrap())
-                        });
-                        let mut s = Vec::new();
-                        for attr in attrs {
-                            s.extend_from_slice(attr.as_ref());
-                            s.extend_from_slice(" ".as_bytes());
-                        }
-                        Some(str::from_utf8(&s).unwrap().to_string())
+                        let attrs = e.attributes().
+                            map(|a| CdciXmlAttribute::new(a.unwrap()));
+                        Some(attrs.collect())
                     }
                 }
             }
             _ => return None
         }
+    }
+}
+
+fn print_attribute(attrs: Vec<CdciXmlAttribute>) {
+    for attr in attrs {
+        println!("attr name = {:?}", str::from_utf8(attr.key.as_ref()).unwrap());
+        println!("attr value = {:?}", str::from_utf8(attr.value.as_ref()).unwrap());
     }
 }
 
@@ -93,10 +119,14 @@ fn test() {
     version="build-01.99"
     crocodile="01.17" cdci="01.17"
     info="MPC04 RevC IAR Mar 31 2022 18:53:44" boardRevision="3" serialNumber="7654321" />"#;
-    println!("attr = {}", extract_attr(xml).unwrap());
-    println!("attr = {}", extract_attr(xml_wr).unwrap());
-    println!("attr = {}", extract_attr(xml_ok).unwrap());
-    println!("attr = {}", extract_attr(xml_identify).unwrap());
+    //println!("attr = {:?}", extract_attr(xml).unwrap());
+    print_attribute(extract_attr(xml).unwrap());
+    //println!("attr = {:?}", extract_attr(xml_wr).unwrap());
+    print_attribute(extract_attr(xml_wr).unwrap());
+    //println!("attr = {:?}", extract_attr(xml_ok).unwrap());
+    print_attribute(extract_attr(xml_ok).unwrap());
+    //println!("attr = {:?}", extract_attr(xml_identify).unwrap());
+    print_attribute(extract_attr(xml_identify).unwrap());
 }
 
 fn main() {
