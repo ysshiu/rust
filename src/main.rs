@@ -66,7 +66,7 @@ impl CdciXmlElement {
                 for attr_res in attributes {
                     let attr = attr_res.unwrap();
                     d.insert(
-                        str::from_utf8(attr.key.as_ref()).unwrap().to_string(),
+                        String::from_utf8(attr.key.as_ref().to_vec()).unwrap(),
                         Vec::from(attr.value)
                     );
                 }
@@ -91,8 +91,8 @@ fn extract_attr(xml: &str) -> Option<CdciXmlElement>{
                         Some(CdciXmlElement::new("ok".to_string(), e.attributes()))
                     }
                     _ => {
-                        Some(CdciXmlElement::new(str::from_utf8(e.name().as_ref()).unwrap().to_string(),
-                        e.attributes()))
+                        Some(CdciXmlElement::new(String::from_utf8(e.name().as_ref().to_vec()).unwrap(),
+                                                 e.attributes()))
                     }
                 }
             }
